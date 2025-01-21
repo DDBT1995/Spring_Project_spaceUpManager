@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC " -//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sist.web.dao.ReviewReportDao">
+
+	<resultMap type="com.sist.web.model.ReviewReport" id="reviewReportResultMap">
+	    <id column="REVIEW_REPORT_ID" property="reviewReportId"/>
+	    <result column="REVIEW_ID" property="reviewId"/>
+	    <result column="REPORTER_ID" property="reporterId"/>
+	    <result column="REPORTER_TYPE" property="reporterType"/>
+	    <result column="REPORT_REASON" property="reportReason"/>
+	    <result column="REPORT_DATE" property="reportDate"/>
+	    <result column="STATUS" property="status"/>
+	    <result column="REVIEW_CONTENT" property="reviewContent"/>
+	    <result column="GUEST_EMAIL" property="reviewWriter"/>
+	</resultMap>
+	
+	<!-- 리뷰 신고 리스트 -->
+	<select id="reviewReportList" parameterType="com.sist.web.model.ReviewReport" resultMap="reviewReportResultMap">
+	   SELECT
+		    REVIEW_REPORT_ID,
+		    REVIEW_ID,
+		    REPORTER_ID,
+		    REPORTER_TYPE,
+		    REPORT_REASON,
+		    REPORT_DATE,
+		    STATUS,
+		    REVIEW_CONTENT,
+		    GUEST_EMAIL
+		FROM (
+		    SELECT ROWNUM AS RNUM,
+		           REVIEW_REPORT_ID,
+		           REVIEW_ID,
+		           REPORTER_ID,
+		           REPORTER_TYPE,
+		           REPORT_REASON,
+		           REPORT_DATE,
+		           STATUS,
+		           REVIEW_CONTENT,
+		           GUEST_EMAIL
+		    FROM (
+		        SELECT rr.REVIEW_REPORT_ID AS REVIEW_REPORT_ID,
+		               rr.REVIEW_ID AS REVIEW_ID,
+		               rr.REPORTER_ID AS REPORTER_ID,
+		               rr.REPORTER_TYPE AS REPORTER_TYPE,
+		               rr.REPORT_REASON AS REPORT_REASON,
+		               NVL(TO_CHAR(rr.REPORT_DATE, 'YYYY.MM.DD'), '') AS REPORT_DATE,
+		               NVL(rr.STATUS, '') AS STATUS,
+		               NVL(r.REVIEW_CONTENT, '') AS REVIEW_CONTENT,
+		               NVL(res.GUEST_EMAIL, '') AS GUEST_EMAIL
+		        FROM REVIEW_REPORT rr
+		        JOIN REVIEW r
+		            ON rr.REVIEW_ID = r.REVIEW_ID
+		        LEFT JOIN RESERVATION res
+		            ON r.RESERVATION_ID = res.RESERVATION_ID
+		        WHERE 1=1
+		        ORDER BY rr.REPORT_DATE DESC
+		    )
+		)
+		WHERE RNUM <![CDATA[>=]]> #{startRow}
+	       AND RNUM <![CDATA[<=]]> #{endRow}
+	</select>
+
+	
+	<!-- 리뷰 신고 총 게시물 수 -->
+	<select id="reviewReportCount" parameterType="com.sist.web.model.ReviewReport" resultType="long">
+	    SELECT COUNT(REVIEW_REPORT_ID) AS CNT
+	    FROM REVIEW_REPORT
+	</select>
+	
+	<!-- 신고 처리, 신고처리 여부 업데이트 -->
+	<update id="reviewReportStatusUpdateY" parameterType="long">
+	    UPDATE
+	        REVIEW_REPORT
+	    SET
+	        STATUS = 'Y'
+	    WHERE 
+	    	REVIEW_REPORT_ID = #{value}
+	</update>
+	
+	<!-- 신고 처리, 해당 리뷰 삭제 처리 -->	
+	<update id="reviewStatusUpdateN" parameterType="long">
+	    UPDATE
+	        REVIEW
+	    SET
+	        STATUS = 'N',
+	        MODI_DATE = SYSDATE
+	    WHERE 
+	        REVIEW_ID = #{value}
+	</update>
+	
+	<!-- 신고 처리, 해당 리뷰 작성자 정지 처리 -->
+	<update id="reviewWriterStatusUpdateS" parameterType="String">
+	    UPDATE
+	        GUEST
+	    SET
+	        STATUS = 'S',
+	        MODI_DATE = SYSDATE
+	    WHERE 
+	        GUEST_EMAIL = #{value}
+	</update>
+</mapper>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC " -//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sist.web.dao.HostDao">
+
+	<resultMap type="com.sist.web.model.Host" id="hostResultMap">
+		<id column="HOST_EMAIL" property="hostEmail"/>
+		<result column="HOST_PASSWORD" property="hostPwd"/>
+		<result column="HOST_NICKNAME" property="hostNickname"/>
+		<result column="HOST_BIRTH" property="hostBirth"/>
+		<result column="HOST_TEL" property="hostTel"/>
+		<result column="STATUS" property="status"/>
+		<result column="REG_DATE" property="regDate"/>
+		<result column="MODI_DATE" property="modiDate"/>
+		<result column="DEL_DATE" property="delDate"/>
+	</resultMap>
+	
+	<!-- 게스트 리스트 -->
+	<select id="hostList" parameterType="com.sist.web.model.Host" resultMap="hostResultMap">
+	    SELECT HOST_EMAIL,
+	           HOST_PASSWORD,
+	           HOST_NICKNAME,
+	           HOST_BIRTH,
+	           HOST_TEL,
+	           STATUS,
+	           REG_DATE,
+	           MODI_DATE,
+	           DEL_DATE
+	      FROM (SELECT ROWNUM AS RNUM,
+	                   HOST_EMAIL,
+	                   HOST_PASSWORD,
+	                   HOST_NICKNAME,
+	                   HOST_BIRTH,
+	                   HOST_TEL,
+	                   STATUS,
+	                   REG_DATE,
+	                   MODI_DATE,
+	                   DEL_DATE
+	            FROM (SELECT HOST_EMAIL,
+	                         NVL(HOST_PASSWORD, '') AS HOST_PASSWORD,
+	                         NVL(HOST_NICKNAME, '') AS HOST_NICKNAME,
+	                         NVL(HOST_BIRTH, '') AS HOST_BIRTH,
+	                         NVL(HOST_TEL, '') AS HOST_TEL,
+	                         NVL(STATUS, '') AS STATUS,
+	                         NVL(TO_CHAR(REG_DATE, 'YYYY.MM.DD'), '') AS REG_DATE,
+	                         NVL(TO_CHAR(MODI_DATE, 'YYYY.MM.DD'), '') AS MODI_DATE,
+	                         NVL(TO_CHAR(DEL_DATE, 'YYYY.MM.DD'), '') AS DEL_DATE
+	                    FROM HOST
+	                   WHERE 1=1
+	                   <if test='searchValue != null and searchValue != ""'>
+	                       AND HOST_EMAIL = #{searchValue}
+	                   </if>
+	                   ORDER BY REG_DATE DESC))
+	     WHERE RNUM <![CDATA[>=]]> #{startRow}
+	       AND RNUM <![CDATA[<=]]> #{endRow}
+	</select>
+	
+	<!-- 게스트 총게시물 수 -->
+	<select id="hostCount" parameterType="com.sist.web.model.Host" resultType="long">
+		SELECT COUNT(HOST_EMAIL) AS CNT
+		FROM HOST
+		WHERE 1=1
+		<if test='searchValue != null and searchValue != ""'>
+			AND HOST_EMAIL = #{searchValue}
+		</if>
+	</select>
+	
+	<update id="hostStatusUpdate" parameterType="com.sist.web.model.Host">
+		UPDATE
+			HOST
+	    SET
+	        STATUS = #{status},
+	        DEL_DATE = CASE
+	        WHEN #{status} = 'N'
+	        THEN SYSDATE ELSE DEL_DATE
+			END
+	    WHERE HOST_EMAIL = #{hostEmail}
+	</update>
+</mapper>

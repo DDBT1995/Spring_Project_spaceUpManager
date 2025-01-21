@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC " -//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sist.web.dao.QuestionReportDao">
+
+	<resultMap type="com.sist.web.model.QuestionReport" id="questionReportResultMap">
+	    <id column="QUESTION_REPORT_ID" property="questionReportId"/>
+	    <result column="SPACE_QUESTION_ID" property="spaceQuestionId"/>
+	    <result column="HOST_EMAIL" property="hostEmail"/>
+	    <result column="REPORT_REASON" property="reportReason"/>
+	    <result column="REPORT_DATE" property="reportDate"/>
+	    <result column="STATUS" property="status"/>
+	    <result column="QUESTION_CONTENT" property="questionContent"/>
+	    <result column="GUEST_EMAIL" property="questionWriter"/>
+	</resultMap>
+	
+	<!-- 문의 신고 리스트 -->
+	<select id="questionReportList" parameterType="com.sist.web.model.QuestionReport" resultMap="questionReportResultMap">
+	   SELECT
+	        QUESTION_REPORT_ID,
+	        SPACE_QUESTION_ID,
+	        HOST_EMAIL,
+	        REPORT_REASON,
+	        REPORT_DATE,
+	        STATUS,
+	        QUESTION_CONTENT,
+	        GUEST_EMAIL
+	    FROM (
+	        SELECT ROWNUM AS RNUM,
+	               QUESTION_REPORT_ID,
+	               SPACE_QUESTION_ID,
+	               HOST_EMAIL,
+	               REPORT_REASON,
+	               REPORT_DATE,
+	               STATUS,
+	               QUESTION_CONTENT,
+	               GUEST_EMAIL
+	        FROM (
+	            SELECT qr.QUESTION_REPORT_ID AS QUESTION_REPORT_ID,
+	                   qr.SPACE_QUESTION_ID AS SPACE_QUESTION_ID,
+	                   qr.HOST_EMAIL AS HOST_EMAIL,
+	                   qr.REPORT_REASON AS REPORT_REASON,
+	                   NVL(TO_CHAR(qr.REPORT_DATE, 'YYYY.MM.DD'), '') AS REPORT_DATE,
+	                   NVL(qr.STATUS, '') AS STATUS,
+	                   NVL(sq.QUESTION_CONTENT, '') AS QUESTION_CONTENT,
+	                   NVL(sq.GUEST_EMAIL, '') AS GUEST_EMAIL
+	            FROM QUESTION_REPORT qr
+	            JOIN SPACE_QUESTION sq
+	                ON qr.SPACE_QUESTION_ID = sq.SPACE_QUESTION_ID
+	            WHERE 1=1
+	            ORDER BY qr.REPORT_DATE DESC
+	        )
+	    )
+	    WHERE RNUM <![CDATA[>=]]> #{startRow}
+	      AND RNUM <![CDATA[<=]]> #{endRow}
+	</select>
+
+	
+	<!-- 문의 신고 총 게시물 수 -->
+	<select id="questionReportCount" parameterType="com.sist.web.model.QuestionReport" resultType="long">
+	    SELECT COUNT(QUESTION_REPORT_ID) AS CNT
+	    FROM QUESTION_REPORT
+	</select>
+	
+	<!-- 신고 처리, 신고처리 여부 업데이트 -->
+	<update id="questionReportStatusUpdateY" parameterType="long">
+	    UPDATE
+	        QUESTION_REPORT
+	    SET
+	        STATUS = 'Y'
+	    WHERE 
+	    	QUESTION_REPORT_ID = #{value}
+	</update>
+	
+	<!-- 신고 처리, 해당 문의 삭제 처리 -->	
+	<update id="questionStatusUpdateN" parameterType="long">
+	    UPDATE
+	        SPACE_QUESTION
+	    SET
+	        STATUS = 'N',
+	        MODI_DATE = SYSDATE
+	    WHERE 
+	        SPACE_QUESTION_ID = #{value}
+	</update>
+	
+	<!-- 신고 처리, 해당 문의 작성자 정지 처리 -->
+	<update id="questionWriterStatusUpdateS" parameterType="String">
+	    UPDATE
+	        GUEST
+	    SET
+	        STATUS = 'S',
+	        MODI_DATE = SYSDATE
+	    WHERE 
+	        GUEST_EMAIL = #{value}
+	</update>
+</mapper>
